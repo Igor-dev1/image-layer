@@ -1,0 +1,16 @@
+{
+    "output_format": "webp",
+    "quality": 95,
+    "prefix": "",
+    "suffix": "",
+    "keep_original_format": false,
+    "text_enabled": true,
+    "text_overlay": "TODAS AS DLCs",
+    "text_size": 50,
+    "text_color": "#FFD700",
+    "text_position": "inferior_direita",
+    "text_opacity": 100,
+    "text_bg_enabled": true,
+    "text_bg_color": "#1a1a1a",
+    "text_bg_opacity": 80
+}

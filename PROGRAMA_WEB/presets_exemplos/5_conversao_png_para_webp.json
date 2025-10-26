@@ -1,0 +1,16 @@
+{
+    "output_format": "webp",
+    "quality": 95,
+    "prefix": "",
+    "suffix": "",
+    "keep_original_format": false,
+    "text_enabled": false,
+    "text_overlay": "",
+    "text_size": 40,
+    "text_color": "#FFFFFF",
+    "text_position": "superior_direita",
+    "text_opacity": 100,
+    "text_bg_enabled": true,
+    "text_bg_color": "#000000",
+    "text_bg_opacity": 70
+}

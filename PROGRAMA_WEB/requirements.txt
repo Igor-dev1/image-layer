@@ -1,0 +1,11 @@
+# PROCESSADOR DE IMAGENS EM LOTE - VERSÃO WEB
+# Dependências do projeto Streamlit
+
+# Interface Web
+streamlit>=1.28.0
+
+# Processamento de imagens
+Pillow>=10.0.0
+
+# Nota: Todas as bibliotecas padrão do Python (io, json, zipfile, etc)
+# já vêm incluídas e não precisam ser instaladas

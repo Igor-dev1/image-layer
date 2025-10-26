@@ -1,0 +1,16 @@
+{
+    "output_format": "webp",
+    "quality": 95,
+    "prefix": "",
+    "suffix": "_promo",
+    "keep_original_format": false,
+    "text_enabled": true,
+    "text_overlay": "PROMOÇÃO",
+    "text_size": 60,
+    "text_color": "#FFFF00",
+    "text_position": "superior_direita",
+    "text_opacity": 100,
+    "text_bg_enabled": true,
+    "text_bg_color": "#FF0000",
+    "text_bg_opacity": 85
+}
