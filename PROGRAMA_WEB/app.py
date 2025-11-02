@@ -116,6 +116,7 @@ if 'processor' not in st.session_state:
         'processed': 0,
         'failed': 0
     }
+    st.session_state.keep_overlay_size = False
 
 processor = st.session_state.processor
 
@@ -173,6 +174,13 @@ def create_download_zip(processed_images, format_ext, quality, prefix, suffix):
     zip_buffer.seek(0)
     return zip_buffer
 
+def load_overlay_image():
+    """Carrega a imagem do overlay a partir do session_state"""
+    if 'overlay_file' not in st.session_state or st.session_state.overlay_file is None:
+        return None
+    st.session_state.overlay_file.seek(0)
+    return Image.open(st.session_state.overlay_file)
+
 # ==================== HEADER ====================
 st.markdown("# 🎨 PROCESSADOR DE IMAGENS EM LOTE")
 st.markdown("### 💎 Aplique overlays, molduras e texto em múltiplas imagens com qualidade profissional")
@@ -210,6 +218,12 @@ with st.sidebar:
         st.success(f"✅ Overlay carregado: {overlay_file.name}")
     else:
         st.info("ℹ️ Selecione um arquivo de overlay para continuar")
+
+    keep_overlay_size = st.checkbox(
+        "Manter resolução original do overlay",
+        value=st.session_state.keep_overlay_size
+    )
+    st.session_state.keep_overlay_size = keep_overlay_size
 
     st.markdown("---")
 
@@ -431,42 +445,42 @@ with col1:
                             base_img = Image.open(current_file)
                             filename = current_file.name
 
-                            if base_img.mode != 'RGBA':
-                                base_img = base_img.convert('RGBA')
+                            overlay_img = load_overlay_image()
+                            if overlay_img is None:
+                                st.warning("⚠️ Não foi possível carregar o overlay.")
+                            else:
+                                result = processor.apply_overlay(
+                                    base_img,
+                                    overlay_img,
+                                    st.session_state.keep_overlay_size
+                                )
 
-                            overlay_img = Image.open(st.session_state.overlay_file)
-                            if overlay_img.mode != 'RGBA':
-                                overlay_img = overlay_img.convert('RGBA')
+                                # Aplicar texto se habilitado
+                                if text_enabled and text_overlay.strip():
+                                    pos_map = {
+                                        "Superior Esquerda": "superior_esquerda",
+                                        "Superior Direita": "superior_direita",
+                                        "Inferior Esquerda": "inferior_esquerda",
+                                        "Inferior Direita": "inferior_direita",
+                                        "Centro": "centro"
+                                    }
 
-                            overlay_img = overlay_img.resize(base_img.size, Image.Resampling.LANCZOS)
-                            result = Image.alpha_composite(base_img, overlay_img)
+                                    text_config = {
+                                        "text": text_overlay,
+                                        "size": text_size,
+                                        "color": text_color,
+                                        "position": pos_map[text_position],
+                                        "opacity": text_opacity,
+                                        "bg_enabled": text_bg_enabled,
+                                        "bg_color": text_bg_color if text_bg_enabled else "#000000",
+                                        "bg_opacity": text_bg_opacity if text_bg_enabled else 70
+                                    }
 
-                            # Aplicar texto se habilitado
-                            if text_enabled and text_overlay.strip():
-                                pos_map = {
-                                    "Superior Esquerda": "superior_esquerda",
-                                    "Superior Direita": "superior_direita",
-                                    "Inferior Esquerda": "inferior_esquerda",
-                                    "Inferior Direita": "inferior_direita",
-                                    "Centro": "centro"
-                                }
+                                    result = processor.add_text_overlay(result, text_config)
 
-                                text_config = {
-                                    "text": text_overlay,
-                                    "size": text_size,
-                                    "color": text_color,
-                                    "position": pos_map[text_position],
-                                    "opacity": text_opacity,
-                                    "bg_enabled": text_bg_enabled,
-                                    "bg_color": text_bg_color if text_bg_enabled else "#000000",
-                                    "bg_opacity": text_bg_opacity if text_bg_enabled else 70
-                                }
-
-                                result = processor.add_text_overlay(result, text_config)
-
-                            st.session_state.preview_image = result
-                            st.session_state.show_preview = True
-                            st.success(f"✅ Preview gerado: {filename}")
+                                st.session_state.preview_image = result
+                                st.session_state.show_preview = True
+                                st.success(f"✅ Preview gerado: {filename}")
 
                         except Exception as e:
                             st.error(f"❌ Erro ao gerar preview: {str(e)}")
@@ -539,13 +553,15 @@ with col2:
                     if base_img.mode != 'RGBA':
                         base_img = base_img.convert('RGBA')
 
-                    st.session_state.overlay_file.seek(0)
-                    overlay_img = Image.open(st.session_state.overlay_file)
-                    if overlay_img.mode != 'RGBA':
-                        overlay_img = overlay_img.convert('RGBA')
-                    overlay_img = overlay_img.resize(base_img.size, Image.Resampling.LANCZOS)
+                    overlay_img = load_overlay_image()
+                    if overlay_img is None:
+                        raise RuntimeError("Overlay não disponível.")
 
-                    result = Image.alpha_composite(base_img, overlay_img)
+                    result = processor.apply_overlay(
+                        base_img,
+                        overlay_img,
+                        st.session_state.keep_overlay_size
+                    )
 
                     # Aplicar texto
                     if text_enabled and text_overlay.strip():
