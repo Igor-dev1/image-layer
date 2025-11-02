@@ -32,20 +32,30 @@ class ImageProcessor:
                     "C:/Windows/Fonts/calibri.ttf",
                     "C:/Windows/Fonts/segoeui.ttf"
                 ]
-            else:  # Linux/Mac
+            else:  # Linux/Mac (incluindo Streamlit Cloud)
                 font_paths = [
                     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
                     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-                    "/System/Library/Fonts/Helvetica.ttc"
+                    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                    "/System/Library/Fonts/Helvetica.ttc",
+                    # Fontes alternativas para ambientes cloud
+                    "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
+                    "/usr/share/fonts/liberation/LiberationSans-Bold.ttf"
                 ]
 
             for font_path in font_paths:
                 if os.path.exists(font_path):
                     self.default_font = font_path
+                    print(f"✅ Fonte carregada: {font_path}")
                     break
 
+            # Se nenhuma fonte foi encontrada, não é erro crítico
+            if not self.default_font:
+                print("⚠️ Nenhuma fonte TTF encontrada. Usando fonte padrão do PIL.")
+
         except Exception as e:
-            print(f"Aviso: Não foi possível carregar fonte padrão: {e}")
+            print(f"⚠️ Aviso: Não foi possível carregar fonte padrão: {e}")
 
     def get_image_files(self, folder: str) -> List[str]:
         """

@@ -9,3 +9,5 @@ Pillow>=10.0.0
 
 # Nota: Todas as bibliotecas padrão do Python (io, json, zipfile, etc)
 # já vêm incluídas e não precisam ser instaladas
+
+# Python version: 3.8+
