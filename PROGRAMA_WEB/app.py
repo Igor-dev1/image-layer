@@ -117,6 +117,7 @@ if 'processor' not in st.session_state:
         'failed': 0
     }
     st.session_state.keep_overlay_size = False
+    st.session_state.uploader_key = 0  # Chave para forçar reset do file_uploader
 
 processor = st.session_state.processor
 
@@ -213,8 +214,18 @@ with st.sidebar:
         "Arraste e solte ou selecione suas imagens",
         type=['png', 'jpg', 'jpeg', 'webp'],
         accept_multiple_files=True,
-        help="Envie as imagens que receberão o overlay"
+        help="Envie as imagens que receberão o overlay",
+        key=f"file_uploader_{st.session_state.uploader_key}"
     )
+
+    # Botão para limpar arquivos de entrada
+    if uploaded_files:
+        if st.button("🗑️ Limpar Arquivos de Entrada", use_container_width=True, help="Remove todas as imagens selecionadas"):
+            st.session_state.uploader_key += 1
+            st.session_state.show_preview = False
+            st.session_state.preview_image = None
+            st.session_state.current_preview_index = 0
+            st.rerun()
 
     # ===== UPLOAD DE OVERLAY =====
     st.markdown("### 🖼️ OVERLAY/MOLDURA")
