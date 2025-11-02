@@ -137,12 +137,33 @@ class ImageProcessor:
             overlay_resized = overlay.resize(base.size, Image.Resampling.LANCZOS)
             return Image.alpha_composite(base, overlay_resized)
 
-        # manter o overlay em seu tamanho original: redimensiona a base
-        if base.size == overlay.size:
-            return Image.alpha_composite(base, overlay)
+        # Manter resolução original do overlay SEM ACHATAR a imagem base
+        # Criar canvas do tamanho do overlay
+        canvas = Image.new('RGBA', overlay.size, (0, 0, 0, 0))
 
-        base_resized = base.resize(overlay.size, Image.Resampling.LANCZOS)
-        return Image.alpha_composite(base_resized, overlay)
+        # Calcular tamanho da base mantendo proporções (fit/contain)
+        base_ratio = base.width / base.height
+        overlay_ratio = overlay.width / overlay.height
+
+        if base_ratio > overlay_ratio:
+            # Base é mais larga: ajustar pela largura
+            new_width = overlay.width
+            new_height = int(overlay.width / base_ratio)
+        else:
+            # Base é mais alta: ajustar pela altura
+            new_height = overlay.height
+            new_width = int(overlay.height * base_ratio)
+
+        # Redimensionar base mantendo proporções
+        base_resized = base.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+        # Centralizar base no canvas
+        x_offset = (overlay.width - new_width) // 2
+        y_offset = (overlay.height - new_height) // 2
+        canvas.paste(base_resized, (x_offset, y_offset))
+
+        # Aplicar overlay por cima
+        return Image.alpha_composite(canvas, overlay)
 
     def add_text_overlay(self, image: Image.Image, config: Dict) -> Image.Image:
         """
