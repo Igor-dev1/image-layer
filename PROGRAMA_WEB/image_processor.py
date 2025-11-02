@@ -128,32 +128,9 @@ class ImageProcessor:
             overlay_resized = overlay.resize(base.size, Image.Resampling.LANCZOS)
             return Image.alpha_composite(base, overlay_resized)
 
-        # Criar camada transparente do tamanho da base
-        overlay_layer = Image.new('RGBA', base.size, (0, 0, 0, 0))
-
-        overlay_w, overlay_h = overlay.size
-        base_w, base_h = base.size
-
-        # Centralizar overlay
-        offset_x = (base_w - overlay_w) // 2
-        offset_y = (base_h - overlay_h) // 2
-
-        # Ajustar para garantir que fique dentro da base (cropping se necessário)
-        crop_left = max(0, -offset_x)
-        crop_top = max(0, -offset_y)
-        crop_right = min(overlay_w, base_w - offset_x)
-        crop_bottom = min(overlay_h, base_h - offset_y)
-
-        if crop_right > crop_left and crop_bottom > crop_top:
-            if (crop_left != 0) or (crop_top != 0) or (crop_right != overlay_w) or (crop_bottom != overlay_h):
-                overlay = overlay.crop((crop_left, crop_top, crop_right, crop_bottom))
-                overlay_w, overlay_h = overlay.size
-                offset_x = max(0, offset_x)
-                offset_y = max(0, offset_y)
-
-            overlay_layer.paste(overlay, (offset_x, offset_y), overlay)
-
-        return Image.alpha_composite(base, overlay_layer)
+        # manter o overlay em seu tamanho original: redimensiona a base
+        base_resized = base.resize(overlay.size, Image.Resampling.LANCZOS)
+        return Image.alpha_composite(base_resized, overlay)
 
     def add_text_overlay(self, image: Image.Image, config: Dict) -> Image.Image:
         """
