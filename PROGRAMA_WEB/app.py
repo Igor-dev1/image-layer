@@ -191,6 +191,9 @@ st.markdown("---")
 with st.sidebar:
     st.markdown("## ⚙️ CONFIGURAÇÕES")
 
+    # ===== INFO DO SERVIDOR =====
+    st.info("💡 **Dica:** Para melhor performance, processe até 50 imagens por vez.")
+
     # ===== ARQUIVOS DE ENTRADA =====
     st.markdown("### 📂 ARQUIVOS DE ENTRADA")
     uploaded_files = st.file_uploader(
@@ -541,22 +544,47 @@ with col2:
             start_time = datetime.now()
             failed_files = []
 
+            # ⚡ OTIMIZAÇÃO: Carregar overlay UMA VEZ antes do loop
+            status_text.text("Carregando overlay...")
+            overlay_img = load_overlay_image()
+            if overlay_img is None:
+                st.error("❌ Overlay não disponível.")
+                st.stop()
+
+            # Converter overlay para RGBA uma vez
+            if overlay_img.mode != 'RGBA':
+                overlay_img = overlay_img.convert('RGBA')
+
+            status_text.text("Iniciando processamento...")
+
             # Processar cada imagem
+            img_start_times = []  # Para calcular tempo médio
+
             for idx, file_item in enumerate(images_to_process):
+                img_start = datetime.now()
+
                 try:
                     filename = file_item.name
                     file_item.seek(0)
                     base_img = Image.open(file_item)
 
-                    status_text.text(f"Processando: {filename} ({idx + 1}/{total_images})")
+                    # Calcular tempo estimado restante
+                    if idx > 0 and img_start_times:
+                        avg_time = sum(img_start_times) / len(img_start_times)
+                        remaining = total_images - idx
+                        eta_seconds = avg_time * remaining
+                        eta_text = f" - ETA: {int(eta_seconds)}s"
+                    else:
+                        eta_text = ""
 
+                    percent = int(((idx + 1) / total_images) * 100)
+                    status_text.text(f"⚡ [{percent}%] Processando: {filename} ({idx + 1}/{total_images}){eta_text}")
+
+                    # Converter para RGBA
                     if base_img.mode != 'RGBA':
                         base_img = base_img.convert('RGBA')
 
-                    overlay_img = load_overlay_image()
-                    if overlay_img is None:
-                        raise RuntimeError("Overlay não disponível.")
-
+                    # Aplicar overlay (já está carregado e em RGBA)
                     result = processor.apply_overlay(
                         base_img,
                         overlay_img,
@@ -593,6 +621,15 @@ with col2:
                     failed_files.append((filename, str(e)))
                     st.session_state.stats['failed'] += 1
 
+                # Calcular tempo gasto nesta imagem
+                img_end = datetime.now()
+                img_time = (img_end - img_start).total_seconds()
+                img_start_times.append(img_time)
+
+                # Manter apenas últimas 5 medições para cálculo de média
+                if len(img_start_times) > 5:
+                    img_start_times.pop(0)
+
                 progress_bar.progress((idx + 1) / total_images)
 
             # Finalizar
@@ -605,15 +642,18 @@ with col2:
             st.success("✅ Processamento concluído!")
 
             # Métricas
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("Total", st.session_state.stats['total'])
             with col2:
                 st.metric("✅ Processadas", st.session_state.stats['processed'])
             with col3:
                 st.metric("❌ Falhas", st.session_state.stats['failed'])
+            with col4:
+                imgs_per_sec = st.session_state.stats['processed'] / max(duration, 0.1)
+                st.metric("⚡ Velocidade", f"{imgs_per_sec:.1f} img/s")
 
-            st.caption(f"⏱️ Tempo total: {duration:.2f} segundos")
+            st.caption(f"⏱️ Tempo total: {duration:.2f} segundos | Média: {duration/max(total_images, 1):.2f}s por imagem")
 
             if failed_files:
                 with st.expander("⚠️ Ver erros", expanded=False):

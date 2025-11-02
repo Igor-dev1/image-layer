@@ -122,23 +122,25 @@ class ImageProcessor:
     ) -> Image.Image:
         """
         Combina base e overlay com opção de manter a resolução original do overlay.
-        Quando mantido, o overlay é centralizado e recortado se ultrapassar os limites.
+        ⚡ OTIMIZADO: Assume que imagens já estão em RGBA (convertidas antes do loop)
         """
-        if base_image.mode != 'RGBA':
-            base = base_image.convert('RGBA')
-        else:
-            base = base_image.copy()
-
-        if overlay_image.mode != 'RGBA':
-            overlay = overlay_image.convert('RGBA')
-        else:
-            overlay = overlay_image.copy()
+        # ⚡ OTIMIZAÇÃO: Não fazer cópia se já está no formato correto
+        base = base_image
+        overlay = overlay_image
 
         if not keep_original_size:
+            # Verificar se já está no tamanho correto (evita resize desnecessário)
+            if overlay.size == base.size:
+                return Image.alpha_composite(base, overlay)
+
+            # Usar LANCZOS para qualidade, mas com otimização
             overlay_resized = overlay.resize(base.size, Image.Resampling.LANCZOS)
             return Image.alpha_composite(base, overlay_resized)
 
         # manter o overlay em seu tamanho original: redimensiona a base
+        if base.size == overlay.size:
+            return Image.alpha_composite(base, overlay)
+
         base_resized = base.resize(overlay.size, Image.Resampling.LANCZOS)
         return Image.alpha_composite(base_resized, overlay)
 
