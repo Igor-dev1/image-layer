@@ -138,26 +138,28 @@ class ImageProcessor:
             return Image.alpha_composite(base, overlay_resized)
 
         # Manter resolução original do overlay SEM ACHATAR a imagem base
+        # Usar comportamento "cover" - expande até preencher completamente
+
         # Criar canvas do tamanho do overlay
         canvas = Image.new('RGBA', overlay.size, (0, 0, 0, 0))
 
-        # Calcular tamanho da base mantendo proporções (fit/contain)
+        # Calcular tamanho da base mantendo proporções (cover - preenche tudo)
         base_ratio = base.width / base.height
         overlay_ratio = overlay.width / overlay.height
 
         if base_ratio > overlay_ratio:
-            # Base é mais larga: ajustar pela largura
-            new_width = overlay.width
-            new_height = int(overlay.width / base_ratio)
-        else:
-            # Base é mais alta: ajustar pela altura
+            # Base é mais larga: ajustar pela ALTURA (para cobrir tudo)
             new_height = overlay.height
             new_width = int(overlay.height * base_ratio)
+        else:
+            # Base é mais alta: ajustar pela LARGURA (para cobrir tudo)
+            new_width = overlay.width
+            new_height = int(overlay.width / base_ratio)
 
         # Redimensionar base mantendo proporções
         base_resized = base.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
-        # Centralizar base no canvas
+        # Centralizar base no canvas (pode cortar as bordas)
         x_offset = (overlay.width - new_width) // 2
         y_offset = (overlay.height - new_height) // 2
         canvas.paste(base_resized, (x_offset, y_offset))
