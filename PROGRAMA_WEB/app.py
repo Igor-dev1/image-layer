@@ -136,12 +136,22 @@ def save_preset(config):
     preset_data = json.dumps(config, indent=4, ensure_ascii=False)
     return preset_data
 
-def create_download_zip(processed_images, format_ext, quality, prefix, suffix):
-    """Cria arquivo ZIP com todas as imagens processadas"""
+def create_download_zip(processed_images, format_ext, quality, prefix, suffix, progress_callback=None):
+    """
+    Cria arquivo ZIP com todas as imagens processadas
+    ⚡ OTIMIZADO: Sem compressão do ZIP (imagens já são comprimidas)
+    """
     zip_buffer = io.BytesIO()
 
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+    # ZIP_STORED = sem compressão (muito mais rápido, pois imagens já são comprimidas)
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_STORED) as zip_file:
+        total = len(processed_images)
+
         for idx, (img, original_name) in enumerate(processed_images, 1):
+            # Callback de progresso
+            if progress_callback:
+                progress_callback(idx, total, original_name)
+
             # Criar nome do arquivo
             name_without_ext = Path(original_name).stem
             new_name = f"{prefix}{name_without_ext}{suffix}.{format_ext}"
@@ -150,12 +160,14 @@ def create_download_zip(processed_images, format_ext, quality, prefix, suffix):
             img_buffer = io.BytesIO()
 
             if format_ext == 'png':
-                img.save(img_buffer, 'PNG', optimize=True)
+                # PNG: Sem optimize para velocidade
+                img.save(img_buffer, 'PNG', compress_level=6)
             elif format_ext == 'webp':
                 if quality == 100:
-                    img.save(img_buffer, 'WEBP', lossless=True, quality=100)
+                    img.save(img_buffer, 'WEBP', lossless=True, quality=100, method=4)
                 else:
-                    img.save(img_buffer, 'WEBP', quality=quality, method=6)
+                    # method=4 é mais rápido que method=6 com qualidade similar
+                    img.save(img_buffer, 'WEBP', quality=quality, method=4)
             elif format_ext in ['jpg', 'jpeg']:
                 # Converter para RGB se necessário
                 if img.mode in ('RGBA', 'LA', 'P'):
@@ -166,7 +178,8 @@ def create_download_zip(processed_images, format_ext, quality, prefix, suffix):
                     img = background
                 elif img.mode != 'RGB':
                     img = img.convert('RGB')
-                img.save(img_buffer, 'JPEG', quality=quality, optimize=True, subsampling=0)
+                # Remover optimize e subsampling para velocidade
+                img.save(img_buffer, 'JPEG', quality=quality)
 
             # Adicionar ao ZIP
             zip_file.writestr(new_name, img_buffer.getvalue())
@@ -665,26 +678,45 @@ with col2:
         st.markdown("---")
         st.markdown("### 📥 DOWNLOAD")
 
-        with st.spinner("Preparando arquivo..."):
-            zip_buffer = create_download_zip(
-                st.session_state.processed_images,
-                selected_format,
-                quality,
-                prefix,
-                suffix
-            )
+        # Criar placeholder para feedback
+        zip_progress_bar = st.progress(0)
+        zip_status = st.empty()
 
-            filename = f"imagens_processadas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+        # Função de callback para progresso
+        def zip_progress_callback(current, total, filename):
+            percent = current / total
+            zip_progress_bar.progress(percent)
+            zip_status.text(f"📦 Preparando ZIP: {current}/{total} - {filename}")
 
-            st.download_button(
-                label=f"📥 BAIXAR TODAS ({len(st.session_state.processed_images)} imagens)",
-                data=zip_buffer,
-                file_name=filename,
-                mime="application/zip",
-                use_container_width=True
-            )
+        # Criar ZIP com feedback
+        zip_start = datetime.now()
+        zip_buffer = create_download_zip(
+            st.session_state.processed_images,
+            selected_format,
+            quality,
+            prefix,
+            suffix,
+            progress_callback=zip_progress_callback
+        )
+        zip_end = datetime.now()
+        zip_duration = (zip_end - zip_start).total_seconds()
+
+        # Limpar feedback
+        zip_progress_bar.empty()
+        zip_status.empty()
+
+        filename = f"imagens_processadas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+
+        st.download_button(
+            label=f"📥 BAIXAR TODAS ({len(st.session_state.processed_images)} imagens)",
+            data=zip_buffer,
+            file_name=filename,
+            mime="application/zip",
+            use_container_width=True
+        )
 
         st.success(f"✅ {len(st.session_state.processed_images)} imagem(ns) pronta(s) para download!")
+        st.caption(f"⚡ ZIP criado em {zip_duration:.2f} segundos")
 
         # Preview das processadas (compacto)
         with st.expander("👁️ Ver imagens processadas", expanded=False):
